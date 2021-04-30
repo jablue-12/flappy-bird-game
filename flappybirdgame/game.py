@@ -71,7 +71,7 @@ def is_collision(bird_rect,pipes):
             print("collision occured against the pipe")
             return True
 
-        if bird_rect.top<= -50 or bird_rect.bottom>= (HEIGHT / 2) + (HEIGHT / 3):
+        if bird_rect.top<= -50 or bird_rect.bottom >= 600:
             #-50 so that bird can still go above the origin.
             #(HEIGHT / 2) + (HEIGHT / 3) is the height of the floor
             print("collision occured against the ceiling or bottom")
@@ -101,6 +101,42 @@ def bird_animation(bird_frames,index,prev_bird_rect):
     new_bird_rect = new_bird.get_rect(center = (BIRD_X_LOCATION,prev_bird_rect.centery))
     return new_bird,new_bird_rect
 #end bird_animation function
+
+#score_display function
+#function that displays the current score of the user.
+#game_font parameter is the font style of the game.
+#score parameter is the current score in integer.
+#high_score parameter is the highest score displayed once the game is over.
+#is_game_over parameter is a boolean variable. If its true then we display the high score.
+def score_display(game_font,score,high_score,is_game_over):
+
+    if is_game_over:
+        #current score
+        score_surface = game_font.render("Score:" + str(int(score)), True, (255, 255, 255))
+        score_rect = score_surface.get_rect(center=(WIDTH/2, 150))  # 100 px away from the screen
+        screen.blit(score_surface, score_rect)  # display the score
+
+        #highest score
+        high_score_surface = game_font.render("High score: " + str(int(high_score)), True, (255, 255, 255))
+        high_score_rect = high_score_surface.get_rect(center=(WIDTH/2, 200))  # 100 px away from the screen
+        screen.blit(high_score_surface, high_score_rect)  # display the score
+
+    else:
+        # current score
+        score_surface = game_font.render(str(int(score)), True, (255, 255, 255))
+        score_rect = score_surface.get_rect(center=(WIDTH/2, 100))  # 100 px away from the screen
+        screen.blit(score_surface, score_rect)  # display the score
+
+#end score_display function
+
+#get_high_score function
+#function that compares the current score and highest score and return which score is the highest.
+def get_high_score(new_score,current_high_score):
+    if new_score > current_high_score:
+        return new_score
+    else:
+        return current_high_score
+#end get_high_score function
 
 #initiates pygame
 pygame.init()
@@ -145,6 +181,9 @@ pygame.time.set_timer(SPAWNPIPE,PIPE_SPAWN_TIME) #SPAWN TIME in milliseconds
 
 #game logic
 is_game_over = False
+score = 0 #current score
+high_score = 0 #highest score
+game_font = pygame.font.Font('04B_19.TTF',40)
 
 while True: #run foreva
     for event in pygame.event.get(): #check what event is happening
@@ -165,6 +204,7 @@ while True: #run foreva
                 pipe_list.clear() #empty the pipes
                 bird_rect.center = (BIRD_X_LOCATION,HEIGHT/2) #recenter the bird
                 bird_movement = 0
+                score = 0  # reset current score to 0
 
         if event.type == SPAWNPIPE:
             #create a new pipe and add it to the pipe_list
@@ -173,11 +213,11 @@ while True: #run foreva
             #print("pipe" + str(i))
 
         if event.type == BIRDFLAP:
+            #wings animation for the bird.
             if bird_index <2:
                 bird_index+=1
             else:
                 bird_index = 0
-
             bird_image,bird_rect = bird_animation(bird_frames,bird_index,bird_rect)
 
     # background
@@ -193,8 +233,14 @@ while True: #run foreva
         #pipes
         pipe_list = move_pipes(pipe_list)
         draw_pipes(screen,pipe_image,pipe_list)
-
+        score += 0.01
         is_game_over = is_collision(bird_rect,pipe_list)
+        score_display(game_font,score,high_score,is_game_over)
+
+    #display the score after the game is over to show the highest score
+    high_score =  get_high_score(score,high_score)
+    score_display(game_font,score,high_score,is_game_over)
+
 
     #drawing the floor must be after drawing the bird and pipes so that the floor covers the pipe images.
     # draw the floor surface
@@ -203,7 +249,6 @@ while True: #run foreva
 
     if floorX_pos <= -WIDTH:  # keep moving the floor foreva
         floorX_pos = 0
-
 
     pygame.display.update() #simply redraws the image
     clock.tick(FPS) #runs 120 fps or slower
