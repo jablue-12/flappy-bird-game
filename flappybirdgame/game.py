@@ -11,8 +11,11 @@ HEIGHT = 720
 FPS = 100 #frames per second
 GRAVITY = 0.25 #gravity for the bird
 MOVE_BIRD_UP = 10 #speed of the bird going up
+BIRD_X_LOCATION = 100 #center.x of the bird image
+BIRDFLAP_TIME = 200 #in mseconds
 PIPE_DISTANCE = 200
 PIPE_SPAWN_TIME = 1500 #in mseconds
+
 
 #draw_floor function
 #function that draws the floor of the background.
@@ -77,6 +80,28 @@ def is_collision(bird_rect,pipes):
     return False
 #end is_collision function
 
+#rotate_bird function
+#function that rotates the image of the bird
+#image_bird paramater is the image of the bird to be rotated.
+#bird_movement parameter is the movement of the bird.
+def rotate_bird(image_bird,bird_movement):
+    new_bird = pygame.transform.rotozoom(image_bird,-bird_movement * 3,1) #rotates the image using rotozoom
+    return new_bird
+#end rotate_bird function
+
+
+#bird_animation function
+#function that animates the wings of the bird.
+#bird_frames parameter is a list of bird images.
+#index parameter is the index that chooses which bird frame will be used.
+#prev_bird_rect parameter is the previous bird rectangle that will be used to get the location of the y coordinate.
+#it will return a tuple of the chosen bird frame and a rectangle around it.
+def bird_animation(bird_frames,index,prev_bird_rect):
+    new_bird = bird_frames[index]
+    new_bird_rect = new_bird.get_rect(center = (BIRD_X_LOCATION,prev_bird_rect.centery))
+    return new_bird,new_bird_rect
+#end bird_animation function
+
 #initiates pygame
 pygame.init()
 
@@ -86,17 +111,25 @@ clock = pygame.time.Clock() #used for framerate
 #get the images
 background_surface = pygame.image.load('assets/background-day.png').convert() #display surface
 floor_surface = pygame.image.load('assets/base.png').convert() #floor image
-bird_image = pygame.image.load('assets/bluebird-midflap.png').convert() # bird image
 pipe_image = pygame.image.load('assets/pipe-green.png').convert() #obstacle image
+
+#bird images/animation
+bird_downflap_surface = pygame.image.load('assets/redbird-downflap.png').convert_alpha()
+bird_midflap_surface = pygame.image.load('assets/redbird-midflap.png').convert_alpha()
+bird_upflap_surface = pygame.image.load('assets/redbird-upflap.png').convert_alpha()
+bird_frames = [bird_downflap_surface,bird_midflap_surface,bird_upflap_surface] #used for animation
+bird_index = 0
+
+bird_image = bird_frames[bird_index]
+bird_rect = bird_image.get_rect(center = (BIRD_X_LOCATION,HEIGHT/2))
+
+BIRDFLAP = pygame.USEREVENT + 1 # +1 so that its different from SPAWNPIPE
+pygame.time.set_timer(BIRDFLAP,BIRDFLAP_TIME)
 
 #scale the image
 background_surface = pygame.transform.scale(background_surface, (WIDTH, HEIGHT))
 floor_surface = pygame.transform.scale2x(floor_surface) #scale the image twice
-#bird_image = pygame.transform.scale2x(bird_image) #scale the image twice
-#pipe_image = pygame.transform.scale2x(pipe_image) #scale the image twice
 
-
-bird_rect = bird_image.get_rect(center= (100,HEIGHT/2)) #puts a rectangle around the image of the bird
 
 #x and y position
 floorX_pos = 0
@@ -127,11 +160,10 @@ while True: #run foreva
                 bird_movement -= MOVE_BIRD_UP
                 #print("move up bird!")
 
-
             if event.key == pygame.K_SPACE and is_game_over:
                 is_game_over = False
                 pipe_list.clear() #empty the pipes
-                bird_rect.center = (100,HEIGHT/2) #recenter the bird
+                bird_rect.center = (BIRD_X_LOCATION,HEIGHT/2) #recenter the bird
                 bird_movement = 0
 
         if event.type == SPAWNPIPE:
@@ -140,14 +172,23 @@ while True: #run foreva
             #print(pipe_list)
             #print("pipe" + str(i))
 
+        if event.type == BIRDFLAP:
+            if bird_index <2:
+                bird_index+=1
+            else:
+                bird_index = 0
+
+            bird_image,bird_rect = bird_animation(bird_frames,bird_index,bird_rect)
+
     # background
     screen.blit(background_surface, (0, 0))  # background image position at origin
 
     if not is_game_over:
         #bird
-        screen.blit(bird_image,bird_rect) #bird image
         bird_movement+= GRAVITY
+        rotated_bird = rotate_bird(bird_image,bird_movement) #rotate the image of the bird
         bird_rect.centery += bird_movement #change the y position of the bird
+        screen.blit(rotated_bird,bird_rect) #bird image
 
         #pipes
         pipe_list = move_pipes(pipe_list)
