@@ -1,6 +1,4 @@
-import pygame
-import sys
-import random
+import pygame,sys,random,sqlite3
 
 #NOTE: Top Left is at (0,0) coordinate
 #canvas size
@@ -13,8 +11,11 @@ GRAVITY = 0.25 #gravity for the bird
 MOVE_BIRD_UP = 10 #speed of the bird going up
 BIRD_X_LOCATION = 100 #center.x of the bird image
 BIRDFLAP_TIME = 200 #in mseconds
-PIPE_DISTANCE = 200
+PIPE_DISTANCE = 200 #gap where the bird has to go through
 PIPE_SPAWN_TIME = 1500 #in mseconds
+
+#Mouse event
+LEFT = 1 #left click
 
 
 #draw_floor function
@@ -68,13 +69,13 @@ def draw_pipes(screen,image_pipe,pipes):
 def is_collision(bird_rect,pipes):
     for pipe in pipes:
         if bird_rect.colliderect(pipe):
-            print("collision occured against the pipe")
+            #print("collision occured against the pipe")
             return True
 
         if bird_rect.top<= -50 or bird_rect.bottom >= 600:
             #-50 so that bird can still go above the origin.
             #(HEIGHT / 2) + (HEIGHT / 3) is the height of the floor
-            print("collision occured against the ceiling or bottom")
+            #print("collision occured against the ceiling or bottom")
             return True
 
     return False
@@ -136,14 +137,70 @@ def score_display(game_font,score,high_score,is_game_over):
 
 #end score_display function
 
-#get_high_score function
+#update_high_score function
 #function that compares the current score and highest score and return which score is the highest.
-def get_high_score(new_score,current_high_score):
+def update_high_score(new_score,current_high_score):
     if new_score > current_high_score:
         return new_score
     else:
         return current_high_score
-#end get_high_score function
+#end update_high_score function
+
+#add_score function
+#function that adds the score to the database. (need to modify such that there are users in the db)
+def add_score(user,score):
+
+    try:
+        connection = sqlite3.connect("game-scores.db") #connect to db
+        #create a table if it has not been created yet.
+        connection.execute("""
+            Create table if not exists scores(
+            score_id integer primary key autoincrement,
+            user_name text,
+            user_score integer
+            );""")
+        # Add the data
+        connection.execute("insert into scores(user_name, user_score) values (?,?)", (user, score))
+        #write to disk
+        connection.commit()
+        #close the connection
+        connection.close()
+    except Exception as e:
+        print(e)
+#end add_score function
+
+#get_high_scrore function
+#function that gets the highest score from the database.
+def get_high_score():
+    highest_score = 0
+
+    try:
+        connection = sqlite3.connect("game-scores.db")  # connect to db
+        # create a table if it has not been created yet.
+        connection.execute("""
+            Create table if not exists scores(
+            score_id integer primary key autoincrement,
+            user_name text,
+            user_score integer
+            );""")
+
+        # read the data
+        print("Reading db...")
+        for row in connection.execute("select score_id,user_name,MAX(user_score) from scores"):
+            if row[2] != None:
+                score_id = row[0]
+                username = row[1]
+                highest_score = row[2]
+                print(score_id,username,highest_score)
+
+        print("done reading..")
+        # close the connection
+        connection.close()
+    except Exception as e:
+        print(e)
+
+    return highest_score
+#end get_high_Score function
 
 #initiates pygame
 pygame.init()
@@ -173,7 +230,6 @@ pygame.time.set_timer(BIRDFLAP,BIRDFLAP_TIME)
 background_surface = pygame.transform.scale(background_surface, (WIDTH, HEIGHT))
 floor_surface = pygame.transform.scale2x(floor_surface) #scale the image twice
 
-
 #x and y position
 floorX_pos = 0
 
@@ -200,18 +256,23 @@ while True: #run foreva
             sys.exit() # shuts down the game
 
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE: #spacebar is clicked
+            if event.key == pygame.K_SPACE and not is_game_over: #spacebar is clicked
                 #want to move the bird up. Decrease value of bird_movement
                 bird_movement = 0 #ignore the gravity so that the speed going up is constant.
                 bird_movement -= MOVE_BIRD_UP
                 #print("move up bird!")
 
-            if event.key == pygame.K_SPACE and is_game_over:
-                is_game_over = False
-                pipe_list.clear() #empty the pipes
-                bird_rect.center = (BIRD_X_LOCATION,HEIGHT/2) #recenter the bird
-                bird_movement = 0
-                score = 0  # reset current score to 0
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == LEFT and is_game_over:
+            #press left button of the mouse to restart the game.
+            #add scores to db first before resetting the variables
+            #add_score("jared",int(score))
+
+            #reset variables
+            is_game_over = False
+            pipe_list.clear() #empty the pipes
+            bird_rect.center = (BIRD_X_LOCATION,HEIGHT/2) #recenter the bird
+            bird_movement = 0
+            score = 0  # reset current score to 0
 
         if event.type == SPAWNPIPE:
             #create a new pipe and add it to the pipe_list
@@ -243,7 +304,11 @@ while True: #run foreva
         score += 0.01
         is_game_over = is_collision(bird_rect,pipe_list)
         #score_display(game_font,score,high_score,is_game_over)
-
+    else:
+        print("in the else")
+        high_score = get_high_score()  # get the highest score from the db.
+        if high_score == 0: #nothing in db yet, then set high_score to the current score
+            high_score = score
 
     #drawing the floor must be after drawing the bird and pipes so that the floor covers the pipe images.
     # draw the floor surface
@@ -254,7 +319,8 @@ while True: #run foreva
         floorX_pos = 0
 
     # display the score after the game is over to show the highest score
-    high_score = get_high_score(score, high_score)
+
+    high_score = update_high_score(score, high_score) #compare the new score to the highest score
     score_display(game_font, score, high_score, is_game_over)
 
     pygame.display.update() #simply redraws the image
