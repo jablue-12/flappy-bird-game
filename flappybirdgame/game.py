@@ -116,10 +116,17 @@ def score_display(game_font,score,high_score,is_game_over):
         score_rect = score_surface.get_rect(center=(WIDTH/2, 150))  # 100 px away from the screen
         screen.blit(score_surface, score_rect)  # display the score
 
-        #highest score
+        #display play again image
+        game_over_surface = pygame.image.load('assets/message.png').convert_alpha()
+        game_over_rect = game_over_surface.get_rect(center=(WIDTH/2,HEIGHT/2))
+        #game_over_surface = pygame.transform.scale(game_over_surface, (WIDTH, HEIGHT))
+        screen.blit(game_over_surface, game_over_rect)
+
+        # highest score
         high_score_surface = game_font.render("High score: " + str(int(high_score)), True, (255, 255, 255))
-        high_score_rect = high_score_surface.get_rect(center=(WIDTH/2, 200))  # 100 px away from the screen
+        high_score_rect = high_score_surface.get_rect(center=(WIDTH / 2, 550))  # 100 px away from the screen
         screen.blit(high_score_surface, high_score_rect)  # display the score
+
 
     else:
         # current score
@@ -235,11 +242,7 @@ while True: #run foreva
         draw_pipes(screen,pipe_image,pipe_list)
         score += 0.01
         is_game_over = is_collision(bird_rect,pipe_list)
-        score_display(game_font,score,high_score,is_game_over)
-
-    #display the score after the game is over to show the highest score
-    high_score =  get_high_score(score,high_score)
-    score_display(game_font,score,high_score,is_game_over)
+        #score_display(game_font,score,high_score,is_game_over)
 
 
     #drawing the floor must be after drawing the bird and pipes so that the floor covers the pipe images.
@@ -249,6 +252,10 @@ while True: #run foreva
 
     if floorX_pos <= -WIDTH:  # keep moving the floor foreva
         floorX_pos = 0
+
+    # display the score after the game is over to show the highest score
+    high_score = get_high_score(score, high_score)
+    score_display(game_font, score, high_score, is_game_over)
 
     pygame.display.update() #simply redraws the image
     clock.tick(FPS) #runs 120 fps or slower
