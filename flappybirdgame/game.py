@@ -192,7 +192,7 @@ def get_high_score():
                 username = row[1]
                 highest_score = row[2]
                 print(score_id,username,highest_score)
-
+        print("highscore = ", highest_score)
         print("done reading..")
         # close the connection
         connection.close()
@@ -245,7 +245,7 @@ pygame.time.set_timer(SPAWNPIPE,PIPE_SPAWN_TIME) #SPAWN TIME in milliseconds
 #game logic
 is_game_over = False
 score = 0 #current score
-high_score = 0 #highest score
+high_score = get_high_score() #highest score
 game_font = pygame.font.Font('04B_19.TTF',40)
 
 while True: #run foreva
@@ -265,7 +265,7 @@ while True: #run foreva
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == LEFT and is_game_over:
             #press left button of the mouse to restart the game.
             #add scores to db first before resetting the variables
-            #add_score("jared",int(score))
+            add_score("jared",int(score))
 
             #reset variables
             is_game_over = False
@@ -273,6 +273,7 @@ while True: #run foreva
             bird_rect.center = (BIRD_X_LOCATION,HEIGHT/2) #recenter the bird
             bird_movement = 0
             score = 0  # reset current score to 0
+            high_score = get_high_score()
 
         if event.type == SPAWNPIPE:
             #create a new pipe and add it to the pipe_list
@@ -304,11 +305,11 @@ while True: #run foreva
         score += 0.01
         is_game_over = is_collision(bird_rect,pipe_list)
         #score_display(game_font,score,high_score,is_game_over)
-    else:
-        print("in the else")
-        high_score = get_high_score()  # get the highest score from the db.
-        if high_score == 0: #nothing in db yet, then set high_score to the current score
-            high_score = score
+    #else:
+    #    print("in the else")
+    #    high_score = get_high_score()  # get the highest score from the db.
+    #    if high_score == 0: #nothing in db yet, then set high_score to the current score
+    #        high_score = score
 
     #drawing the floor must be after drawing the bird and pipes so that the floor covers the pipe images.
     # draw the floor surface
